@@ -228,7 +228,7 @@ const AGG_OPTIONS = [
   { label: 'Monthly', value: 'monthly' }
 ];
 
-function EventGrid() {
+function EventGrid({ isMobile }) {
   const [user, setUser] = useState('');
   const [agg, setAgg] = useState('');
   const [events, setEvents] = useState([]);
@@ -253,7 +253,7 @@ function EventGrid() {
     <Grid container spacing={2} sx={{ mt: 2 }}>
       {evs.map((evt, idx) => (
         <Fade in timeout={400+(idx*60)} key={evt.created_at + evt.username + idx}>
-          <Grid item xs={12} sm={6} md={4} lg={3} key={evt.created_at + evt.username + idx}>
+          <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={evt.created_at + evt.username + idx}>
             <Card sx={{ height: '100%', ':hover': { boxShadow: 12 } }}>
               {evt.photo && (
                 <CardMedia
@@ -261,7 +261,7 @@ function EventGrid() {
                   height="160"
                   image={`http://localhost:8000${evt.photo}`}
                   alt="event"
-                  sx={{ width: 1, height: 180, objectFit: 'cover' }}
+                  sx={{ width: 1, objectFit: 'cover' }}
                 />
               )}
               <CardContent>
@@ -377,7 +377,7 @@ function App() {
   return (
     <Box>
       <Navbar username={username} onAddEvent={handleAddEvent} onLogout={handleLogout} />
-      <Container maxWidth="xl" sx={{ width: '100%', mt: isMobile ? 2 : 4, px: { xs: 0.5, sm: 2 } }}>
+      <Container maxWidth={false} disableGutters sx={{ px: 0, width: '100vw', minHeight: '100vh', mt: isMobile ? 2 : 4 }}>
         {page === "login" && !username && <LoginForm onLogin={handleLogin} />}
         {username && page === "add" && (
           <Box>
@@ -390,7 +390,7 @@ function App() {
         {username && page === "grid" && (
           <Box>
             <Grid container spacing={2} direction={isMobile ? "column" : "row"} alignItems={isMobile ? "stretch" : "center"} sx={{mb: isMobile ? 1 : 3}}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={3} lg={2} xl={2}>
                 <Button variant="outlined" onClick={handleAddEvent} fullWidth={isMobile}>
                   Add Event
                 </Button>
