@@ -1,0 +1,33 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+
+# SQLite DB
+backend/*.db
+backend/*.sqlite3
+
+# FastAPI uploads
+backend/uploads/
+!backend/uploads/.gitkeep
+
+# Node/React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs/temp
+*.log
+*.tmp
+
+# Docker
+*.pid
+*.tar
+
+# Root level
+.env
