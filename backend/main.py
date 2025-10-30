@@ -22,10 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Map short username to (full name, password)
 USERS = {
-    "tanish": "chakkatanish",
-    "naman": "chakkanaman",
-    "ansh": "chakkaansh"
+    "tanish": ("Tanish Bajaj", "chakkatanish"),
+    "naman": ("Naman Kapoor", "chakkanaman"),
+    "ansh": ("Ansh Mangla", "chakkaansh")
 }
 SESSIONS = {}
 
@@ -70,11 +71,12 @@ async def get_current_user(request: Request):
 
 @app.post("/login")
 def login(response: Response, username: str = Form(...), password: str = Form(...)):
-    if username in USERS and USERS[username] == password:
+    userinfo = USERS.get(username)
+    if userinfo and userinfo[1] == password:
         sessionid = secrets.token_hex(16)
-        SESSIONS[sessionid] = username
+        SESSIONS[sessionid] = userinfo[0]  # full name
         response.set_cookie("sessionid", sessionid, httponly=True)
-        return {"message": "Login successful", "username": username}
+        return {"message": "Login successful", "username": userinfo[0]}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.post("/logout")

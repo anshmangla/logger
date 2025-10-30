@@ -8,7 +8,7 @@ import Container from "@mui/material/Container";
 import TextField from "@mui/material/TextField";
 import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
-
+import ActivityHeatmap from 'react-activity-heatmap';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -28,7 +28,6 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme, createTheme, ThemeProvider } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { addDays, subDays, format } from 'date-fns';
 import Dialog from '@mui/material/Dialog';
@@ -38,6 +37,18 @@ import AddIcon from '@mui/icons-material/Add';
 import Tooltip from '@mui/material/Tooltip';
 import Avatar from '@mui/material/Avatar';
 import BarChartIcon from '@mui/icons-material/BarChart';
+
+function DummyHeatmapTest() {
+  return (
+    <ActivityHeatmap
+      data={[
+        { date: "2024-10-25", count: 2 },
+        { date: "2024-10-26", count: 4 },
+        { date: "2024-10-29", count: 1 }
+      ]}
+    />
+  );
+}
 
 function Navbar({ username, onLogOpen, onLogout }) {
   const theme = useTheme();
@@ -338,23 +349,27 @@ function EventHeatmap({ user, heatmapData }) {
   return (
     <Box sx={{my: 4, mx: 'auto', width: { xs: '99vw', md: 660 }, maxWidth: 720, bgcolor: 'background.paper', borderRadius: 3, p: 2, boxShadow: '0 2px 12px 0 #ffefed26', position: 'relative' }}>
       <Typography variant="subtitle1" sx={{ mb: 2, color: '#fc5603', fontWeight: 700, letterSpacing: '.5px' }}>{user}'s Activity</Typography>
-      <CalendarHeatmap
-        startDate={format(range.start, 'yyyy-MM-dd')}
-        endDate={format(range.end, 'yyyy-MM-dd')}
-        values={heatmapData}
-        classForValue={v => {
-          if (!v || !v.count) return 'color-empty';
-          if (v.count >= 10) return 'color-github-5';
-          if (v.count >= 6) return 'color-github-4';
-          if (v.count >= 4) return 'color-github-3';
-          if (v.count >= 2) return 'color-github-2';
-          return 'color-github-1';
-        }}
-        tooltipDataAttrs={v => ({
-          'data-tip': `${v.date || ''}: ${v.count || 0} log${v.count === 1 ? '' : 's'}`
-        })}
-        showWeekdayLabels={true}
-      />
+      <ActivityHeatmap
+  data={heatmapData.map(e => ({
+    date: e.date,
+    count: e.count
+  }))}
+  weekStart={0}
+  panelColors={{
+    0: "#ececec",
+    1: "#ffe4bc",
+    2: "#ffc267",
+    4: "#ff9830",
+    6: "#fc5603",
+    10: "#b23400"
+  }}
+  rectProps={{ rx: 3, fill: "#eee" }}
+  tooltip={(value) => 
+    value && value.count
+      ? `${value.date}: ${value.count} log${value.count === 1 ? '' : 's'}`
+      : "No Activity"
+  }
+/>
       <style>{`.color-empty { fill: #ececec;} .color-github-1 { fill: #ffe4bc;} .color-github-2 { fill: #ffc267;} .color-github-3 { fill: #ff9830;} .color-github-4 { fill: #fc5603;} .color-github-5 { fill: #b23400; }`}</style>
     </Box>
   );
