@@ -25,27 +25,35 @@ import InputLabel from '@mui/material/InputLabel';
 import Grid from '@mui/material/Grid';
 import Fade from '@mui/material/Fade';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, createTheme, ThemeProvider } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
+import CalendarHeatmap from 'react-calendar-heatmap';
+import 'react-calendar-heatmap/dist/styles.css';
+import { addDays, subDays, format } from 'date-fns';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import Fab from '@mui/material/Fab';
+import AddIcon from '@mui/icons-material/Add';
+import Tooltip from '@mui/material/Tooltip';
+import Avatar from '@mui/material/Avatar';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
-function Navbar({ username, onAddEvent, onLogout }) {
+function Navbar({ username, onLogOpen, onLogout }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   return (
-    <AppBar position="static">
+    <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', color: 'primary.main', borderBottom: '1px solid #eee' }}>
       <Toolbar sx={{ flexWrap: 'wrap', px: { xs: 1, sm: 2, md: 3 } }}>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1, minWidth: 110, fontWeight: 600, fontSize: { xs: 19, sm: 22 }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          Daily Logbook
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: 1 }}>
+          📝 Daily Logbook
         </Typography>
         {isMobile && username && <IconButton color="inherit" edge="end"><MenuIcon /></IconButton>}
         {!isMobile && username && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <Button color="inherit" onClick={onAddEvent} sx={{ mr: 1, flexShrink: 0 }}>Add Event</Button>
-            <Typography variant="subtitle1" sx={{ maxWidth: 120, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{username}</Typography>
-            <Button color="inherit" onClick={onLogout} sx={{ ml: 1, flexShrink: 0 }}>
-              Logout
-            </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', ml: 1 }}>
+            <Button color="secondary" variant="outlined" startIcon={<AddIcon />} onClick={onLogOpen} sx={{ ml: 1, fontWeight: 700, borderRadius: 8, borderWidth:2, letterSpacing:'.4px', bgcolor: 'background.paper' }}>Log</Button>
+            <Typography variant="subtitle1" sx={{ maxWidth: 120, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ml: 1 }}>{username}</Typography>
+            <Button color="secondary" variant="outlined" onClick={onLogout} sx={{ ml: 1, borderRadius: 8, bgcolor: 'rgba(255,152,0,0.06)' }}>Logout</Button>
           </Box>
         )}
       </Toolbar>
@@ -218,9 +226,9 @@ function AddEventForm({ onSuccess, username }) {
 }
 
 const USER_OPTIONS = [
-  { label: 'All', value: '' },
-  { label: 'alice', value: 'alice' },
-  { label: 'bob', value: 'bob' }
+  { label: 'Tanish Bajaj', value: 'Tanish Bajaj' },
+  { label: 'Naman Kapoor', value: 'Naman Kapoor' },
+  { label: 'Ansh Mangla', value: 'Ansh Mangla' }
 ];
 const AGG_OPTIONS = [
   { label: 'List All', value: '' },
@@ -228,12 +236,138 @@ const AGG_OPTIONS = [
   { label: 'Monthly', value: 'monthly' }
 ];
 
-function EventGrid({ isMobile }) {
-  const [user, setUser] = useState('');
+function calculateStreaks(dailyEvents) {
+  // Input: [{date: 'YYYY-MM-DD', count: N}, ...]
+  // Output: {currentStreak: X, maxStreak: Y}
+  if (!dailyEvents || dailyEvents.length === 0 || dailyEvents.every(e => !e.count)) return {currentStreak: 0, maxStreak: 0};
+  let streak = 0, maxStreak = 0;
+  let currentStreak = 0;
+  let prev = null;
+  // Use IST for today
+  const todayDate = new Date();
+  const todayIST = new Date(todayDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const today = format(todayIST, 'yyyy-MM-dd');
+  dailyEvents = dailyEvents
+    .filter(e => e.count > 0)
+    .map(e => e.date)
+    .filter(Boolean)
+    .sort();
+  for (let i = 0; i < dailyEvents.length; ++i) {
+    if (i === 0) { streak = 1; }
+    else {
+      const prevDate = new Date(dailyEvents[i-1]);
+      const currDate = new Date(dailyEvents[i]);
+      const diff = (currDate - prevDate) / (1000*60*60*24);
+      if (diff === 1) streak++;
+      else streak = 1;
+    }
+    if (dailyEvents[i] === today) currentStreak = streak;
+    if (streak > maxStreak) maxStreak = streak;
+  }
+  // If today had no log, currentStreak is 0
+  if (!dailyEvents.includes(today)) currentStreak = 0;
+  return {currentStreak, maxStreak};
+}
+function UserProfileCard({ user, heatmapData }) {
+  // heatmapData: [{ date, count }]
+  const total = heatmapData.reduce((a, b) => a + (b.count || 0), 0);
+  // Prepare month stats: { '2025-07': 25, ... }
+  const months = {};
+  heatmapData.forEach(e => {
+    if (!e.date) return;
+    const m = e.date.slice(0,7);
+    months[m] = (months[m] || 0) + (e.count||0);
+  });
+  const monthKeys = Object.keys(months).sort();
+  const {currentStreak, maxStreak} = calculateStreaks(heatmapData);
+  const gradient = 'linear-gradient(90deg,#ff9800 10%,#fd4474 90%)';
+  return (
+    <Card sx={{
+      maxWidth: 560,
+      mx: 'auto',
+      mt: 4,
+      mb: 2,
+      boxShadow: '0 3px 16px 0 #ffd98044',
+      p: 0,
+      borderRadius: 4,
+      position: 'relative',
+      overflow: 'visible',
+      '::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: 8,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        background: gradient,
+        zIndex: 0
+      }
+    }}>
+      <CardContent sx={{ position:'relative', zIndex: 2, pt:2.8 }}>
+        <Box sx={{ display:'flex', alignItems:'center', gap:3, mb:2 }}>
+          <Avatar sx={{ width: 66, height: 66, fontSize: 30, bgcolor: 'secondary.main', color: '#fff', boxShadow: '0 1px 14px #fd447233' }}>{user && user[0]}</Avatar>
+          <Box>
+            <Typography variant='h6' sx={{ fontWeight: 700, mb: '-2px' }}>{user}</Typography>
+            <Typography color="text.secondary" variant="body2">Total Logs: <b>{total}</b></Typography>
+            <Typography color="text.secondary" variant="body2">Streak: <b>{currentStreak}</b> (max {maxStreak})</Typography>
+          </Box>
+        </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 650, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }} color='secondary.main'><BarChartIcon sx={{ fontSize: 20 }}/> By Month:</Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 0.5 }}>
+            {monthKeys.length === 0 && (
+              <Typography variant='body2' color='text.secondary'>No monthly data yet.</Typography>
+            )}
+            {monthKeys.map(m => (
+              <Box key={m} sx={{ minWidth: 68, textAlign: 'center', py: 1, px: 1.2, borderRadius: 3, bgcolor: 'rgba(255,152,0,0.14)', boxShadow: months[m]>0 ? '0 2px 12px #fd447227' : 'none', fontWeight:700 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>{m}</Typography>
+                <Typography color='secondary.main' variant="h6" sx={{ fontWeight: 800, mt: '-2px', letterSpacing: '.5px' }}>{months[m]}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EventHeatmap({ user, heatmapData }) {
+  const [range, setRange] = useState({ start: subDays(new Date(), 180), end: new Date() });
+  return (
+    <Box sx={{my: 4, mx: 'auto', width: { xs: '99vw', md: 660 }, maxWidth: 720, bgcolor: 'background.paper', borderRadius: 3, p: 2, boxShadow: '0 2px 12px 0 #ffefed26', position: 'relative' }}>
+      <Typography variant="subtitle1" sx={{ mb: 2, color: '#fc5603', fontWeight: 700, letterSpacing: '.5px' }}>{user}'s Activity</Typography>
+      <CalendarHeatmap
+        startDate={format(range.start, 'yyyy-MM-dd')}
+        endDate={format(range.end, 'yyyy-MM-dd')}
+        values={heatmapData}
+        classForValue={v => {
+          if (!v || !v.count) return 'color-empty';
+          if (v.count >= 10) return 'color-github-5';
+          if (v.count >= 6) return 'color-github-4';
+          if (v.count >= 4) return 'color-github-3';
+          if (v.count >= 2) return 'color-github-2';
+          return 'color-github-1';
+        }}
+        tooltipDataAttrs={v => ({
+          'data-tip': `${v.date || ''}: ${v.count || 0} log${v.count === 1 ? '' : 's'}`
+        })}
+        showWeekdayLabels={true}
+      />
+      <style>{`.color-empty { fill: #ececec;} .color-github-1 { fill: #ffe4bc;} .color-github-2 { fill: #ffc267;} .color-github-3 { fill: #ff9830;} .color-github-4 { fill: #fc5603;} .color-github-5 { fill: #b23400; }`}</style>
+    </Box>
+  );
+}
+
+function EventGrid({ isMobile, refreshFlag, username }) {
+  // Use username from props if valid, default to 'Tanish Bajaj'
+  const [user, setUser] = useState(USER_OPTIONS.find(o=>o.value===username)?.value || 'Tanish Bajaj');
   const [agg, setAgg] = useState('');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [heatmapData, setHeatmapData] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -246,7 +380,20 @@ function EventGrid({ isMobile }) {
       .then(data => setEvents(data))
       .catch(() => setError('Failed to load events.'))
       .finally(() => setLoading(false));
-  }, [user, agg]);
+  }, [user, agg, refreshFlag]);
+
+  // Heatmap: daily aggregation
+  useEffect(() => {
+    fetch(`http://localhost:8000/events?agg=daily&user=${user}`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(groups => {
+        const map = (groups || []).map(g => ({
+          date: g.date,
+          count: g.count
+        }));
+        setHeatmapData(map);
+      });
+  }, [user, refreshFlag]);
 
   // Flat card grid
   const renderCards = evs => (
@@ -267,7 +414,7 @@ function EventGrid({ isMobile }) {
               <CardContent>
                 <Typography variant="h6">{evt.title}</Typography>
                 <Typography gutterBottom color="text.secondary" variant="body2">
-                  <b>{evt.username}</b> &ndash; {new Date(evt.created_at).toLocaleString()}
+                  <b>{evt.username}</b> &ndash; {new Date(evt.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                 </Typography>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{evt.note}</Typography>
               </CardContent>
@@ -305,6 +452,8 @@ function EventGrid({ isMobile }) {
 
   return (
     <Box>
+      <UserProfileCard user={user} heatmapData={heatmapData} />
+      <EventHeatmap user={user} heatmapData={heatmapData} />
       <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }} direction={isMobile ? 'column' : 'row'}>
         <Grid item xs={12} sm={6} md={3} lg={2} xl={2}>
           <InputLabel>User Filter</InputLabel>
@@ -328,10 +477,38 @@ function EventGrid({ isMobile }) {
   );
 }
 
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#292929',      // Dark text
+    },
+    secondary: {
+      main: '#ff9800',      // Bold orange accent
+      contrastText: '#fff',
+    },
+    background: {
+      default: '#faf8f6',
+      paper: '#fff',
+    },
+    text: {
+      primary: '#151515',
+      secondary: '#666',
+    },
+  },
+  typography: {
+    fontFamily: 'Inter, Roboto, sans-serif',
+    h6: { fontWeight: 700 },
+    subtitle1: { fontWeight: 500 },
+  }
+});
+
 function App() {
   const [page, setPage] = useState("login"); // 'login', 'grid', 'add'
   const [username, setUsername] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [refreshFlag, setRefreshFlag] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -361,7 +538,12 @@ function App() {
     setUsername(user);
     setPage("grid");
   };
-  const handleAddEvent = () => setPage("add");
+  const handleAddEvent = () => setLogModalOpen(true);
+  const handleLogModalClose = () => setLogModalOpen(false);
+  const handleAddSuccess = () => {
+    setLogModalOpen(false);
+    setRefreshFlag(f => f+1);
+  };
   const handleViewGrid = () => setPage("grid");
   const handleLogout = async () => {
     await fetch("http://localhost:8000/logout", {
@@ -375,32 +557,24 @@ function App() {
   if (!authChecked) return <div style={{textAlign:'center', marginTop:80}}>Checking session...</div>;
 
   return (
-    <Box>
-      <Navbar username={username} onAddEvent={handleAddEvent} onLogout={handleLogout} />
+    <ThemeProvider theme={theme}>
+      <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+        <Navbar username={username} onLogOpen={handleAddEvent} onLogout={handleLogout} />
+        <Dialog open={logModalOpen} onClose={handleLogModalClose} maxWidth="sm" fullWidth PaperProps={{sx:{borderRadius:5,p:0}}}>
+          <DialogContent sx={{p:0, bgcolor:'#fff'}}>
+            <AddEventForm onSuccess={handleAddSuccess} username={username} />
+          </DialogContent>
+        </Dialog>
       <Container maxWidth={false} disableGutters sx={{ px: 0, width: '100vw', minHeight: '100vh', mt: isMobile ? 2 : 4 }}>
         {page === "login" && !username && <LoginForm onLogin={handleLogin} />}
-        {username && page === "add" && (
-          <Box>
-            <Button variant="outlined" onClick={handleViewGrid} sx={{ mb: isMobile ? 2 : 0 }} fullWidth={isMobile}>
-              Back
-            </Button>
-            <AddEventForm onSuccess={handleViewGrid} username={username} />
-          </Box>
-        )}
         {username && page === "grid" && (
           <Box>
-            <Grid container spacing={2} direction={isMobile ? "column" : "row"} alignItems={isMobile ? "stretch" : "center"} sx={{mb: isMobile ? 1 : 3}}>
-              <Grid item xs={12} sm={6} md={3} lg={2} xl={2}>
-                <Button variant="outlined" onClick={handleAddEvent} fullWidth={isMobile}>
-                  Add Event
-                </Button>
-              </Grid>
-            </Grid>
-            <EventGrid isMobile={isMobile} />
+              <EventGrid isMobile={isMobile} refreshFlag={refreshFlag} username={username} />
           </Box>
         )}
       </Container>
     </Box>
+    </ThemeProvider>
   );
 }
 
