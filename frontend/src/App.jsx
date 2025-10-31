@@ -51,6 +51,9 @@ function DummyHeatmapTest() {
   );
 }
 
+// Construct API base from host when only host is provided (Render free tier)
+const API_BASE = (import.meta.env.VITE_API_BASE) || (import.meta.env.VITE_API_HOST ? `https://${import.meta.env.VITE_API_HOST}` : "");
+
 function Navbar({ username, onLogOpen, onLogout }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -92,7 +95,7 @@ function LoginForm({ onLogin }) {
       //   credentials: "include",
       //   body: form,
       // });
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}/login`, {
+      const res = await fetch(`${API_BASE}/login`, {
         method: "POST",
         credentials: "include",
         body: form,
@@ -429,7 +432,7 @@ function EventGrid({ isMobile, refreshFlag, username }) {
     setLoading(true);
     setError('');
     // let url = `http://localhost:8000/events?`;
-    let url = `${import.meta.env.VITE_API_BASE}/events?`;
+    let url = `${API_BASE}/events?`;
     if (user) url += `user=${user}&`;
     if (agg) url += `agg=${agg}`;
     fetch(url, { credentials: 'include' })
@@ -442,7 +445,7 @@ function EventGrid({ isMobile, refreshFlag, username }) {
   // Heatmap: daily aggregation
   useEffect(() => {
     // fetch(`http://localhost:8000/events?agg=daily&user=${user}`, { credentials: 'include' })
-    fetch(`${import.meta.env.VITE_API_BASE}/events?agg=daily&user=${user}`, { credentials: 'include' })
+    fetch(`${API_BASE}/events?agg=daily&user=${user}`, { credentials: 'include' })
       .then(res => res.json())
       .then(groups => {
         const map = (groups || []).map(g => ({
@@ -465,7 +468,7 @@ function EventGrid({ isMobile, refreshFlag, username }) {
                   component="img"
                   height="160"
                   // image={`http://localhost:8000${evt.photo}`}
-                  image={`${import.meta.env.VITE_API_BASE}${evt.photo}`}
+                  image={`${API_BASE}${evt.photo}`}
                   alt="event"
                   sx={{ width: 1, objectFit: 'cover' }}
                 />
@@ -577,7 +580,7 @@ function App() {
     //   method: "GET",
     //   credentials: "include",
     // })
-    fetch(`${import.meta.env.VITE_API_BASE}/me`, {
+    fetch(`${API_BASE}/me`, {
       method: "GET",
       credentials: "include",
     })
@@ -613,7 +616,7 @@ function App() {
     //   method: "POST",
     //   credentials: "include"
     // });
-    await fetch(`${import.meta.env.VITE_API_BASE}/logout`, {
+    await fetch(`${API_BASE}/logout`, {
       method: "POST",
       credentials: "include"
     });

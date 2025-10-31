@@ -14,9 +14,17 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 app = FastAPI()
 
 # CORS must come before endpoints
+allowed_origin = os.environ.get("ALLOWED_ORIGIN", "")
+if not allowed_origin:
+    allowed_origin_host = os.environ.get("ALLOWED_ORIGIN_HOST")
+    if allowed_origin_host:
+        allowed_origin = f"https://{allowed_origin_host}"
+if not allowed_origin:
+    allowed_origin = "http://localhost:5173"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ.get("ALLOWED_ORIGIN", "http://localhost:5173")],
+    allow_origins=[allowed_origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,8 +47,8 @@ SESSIONS = {}
 # engine = create_engine("sqlite:///./events.db", connect_args={"check_same_thread": False})
 # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Store uploads inside the persistent disk mounted at /app/data
-UPLOAD_DIR = "/app/data/uploads"
+# Uploads directory (ephemeral on free plan). Can be overridden via env.
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
