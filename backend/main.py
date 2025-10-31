@@ -104,7 +104,14 @@ def login(response: Response, username: str = Form(...), password: str = Form(..
     if userinfo and userinfo[1] == password:
         sessionid = secrets.token_hex(16)
         SESSIONS[sessionid] = userinfo[0]  # full name
-        response.set_cookie("sessionid", sessionid, httponly=True)
+        # Cross-site cookie for separate frontend/backend hosts
+        response.set_cookie(
+            key="sessionid",
+            value=sessionid,
+            httponly=True,
+            secure=True,
+            samesite="none",
+        )
         return {"message": "Login successful", "username": userinfo[0]}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -113,7 +120,12 @@ def logout(request: Request, response: Response):
     sid = request.cookies.get("sessionid")
     if sid in SESSIONS:
         del SESSIONS[sid]
-    response.delete_cookie("sessionid")
+    # Mirror cookie attributes when deleting
+    response.delete_cookie(
+        key="sessionid",
+        secure=True,
+        samesite="none",
+    )
     return {"message": "Logged out"}
 
 @app.post("/events", response_model=EventOut)
