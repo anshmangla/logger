@@ -52,7 +52,35 @@ function DummyHeatmapTest() {
 }
 
 // Construct API base from host when only host is provided (Render free tier)
-const API_BASE = (import.meta.env.VITE_API_BASE) || (import.meta.env.VITE_API_HOST ? `https://${import.meta.env.VITE_API_HOST}` : "");
+// Support both build-time (VITE_) and runtime config
+function getApiBase() {
+  // Try build-time env vars first
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE;
+  }
+  if (import.meta.env.VITE_API_HOST) {
+    return `https://${import.meta.env.VITE_API_HOST}`;
+  }
+  // Try runtime window config (injected via script tag in index.html)
+  if (window.__API_BASE__) {
+    return window.__API_BASE__;
+  }
+  // Try to construct from current hostname (for production)
+  if (window.location.hostname !== 'localhost') {
+    // In production, backend is on a different host - this won't work without proper config
+    console.error('API_BASE not configured. Please set VITE_API_BASE or inject window.__API_BASE__');
+    return '';
+  }
+  // Fallback for local development
+  return 'http://localhost:8000';
+}
+const API_BASE = getApiBase();
+// Log API_BASE for debugging (remove in production if needed)
+if (API_BASE) {
+  console.log('API_BASE configured:', API_BASE);
+} else {
+  console.error('API_BASE is not configured! Network requests will fail.');
+}
 
 function Navbar({ username, onLogOpen, onLogout }) {
   const theme = useTheme();
