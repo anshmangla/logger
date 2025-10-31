@@ -58,7 +58,21 @@ Base = declarative_base()
 DB_DIR = os.environ.get("DB_DIR", "data")
 os.makedirs(DB_DIR, exist_ok=True)
 DEFAULT_DB_URL = f"sqlite:///{os.path.join(DB_DIR, 'events.db')}"
-engine = create_engine(os.environ.get("DATABASE_URL", DEFAULT_DB_URL), connect_args={"check_same_thread": False})
+
+# If DATABASE_URL is provided and is sqlite, ensure its parent directory exists
+db_url = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
+if db_url.startswith("sqlite"):
+    # Normalize sqlite URL to a filesystem path
+    # Cases: sqlite:///relative/path.db  or sqlite:////absolute/path.db
+    path_part = db_url.split("sqlite:///")[-1]
+    # If absolute (starts with '/'), keep as-is; else join with CWD
+    if path_part:
+        db_path = path_part
+        dir_name = os.path.dirname(db_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+
+engine = create_engine(db_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Event(Base):
