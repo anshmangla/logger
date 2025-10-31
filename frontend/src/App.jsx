@@ -8,7 +8,7 @@ import Container from "@mui/material/Container";
 import TextField from "@mui/material/TextField";
 import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
-import ActivityHeatmap from 'react-activity-heatmap';
+import { ActivityHeatmap } from 'react-activity-heatmap';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -41,11 +41,12 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 function DummyHeatmapTest() {
   return (
     <ActivityHeatmap
-      data={[
-        { date: "2024-10-25", count: 2 },
-        { date: "2024-10-26", count: 4 },
-        { date: "2024-10-29", count: 1 }
+      activities={[
+        { date: "2024-10-25", count: 2, level: 1 },
+        { date: "2024-10-26", count: 4, level: 2 },
+        { date: "2024-10-29", count: 1, level: 1 }
       ]}
+      cellColors={{ level0:"#ececec", level1:"#ffe4bc", level2:"#ffc267", level3:"#ff9830", level4:"#fc5603" }}
     />
   );
 }
@@ -86,7 +87,12 @@ function LoginForm({ onLogin }) {
       const form = new FormData();
       form.append("username", username);
       form.append("password", password);
-      const res = await fetch("http://localhost:8000/login", {
+      // const res = await fetch("http://localhost:8000/login", {
+      //   method: "POST",
+      //   credentials: "include",
+      //   body: form,
+      // });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/login`, {
         method: "POST",
         credentials: "include",
         body: form,
@@ -168,7 +174,12 @@ function AddEventForm({ onSuccess, username }) {
       form.append("time_mode", timeMode);
       if (timeMode === "earlier") form.append("timestamp", timestamp);
       if (file) form.append("file", file);
-      const res = await fetch("http://localhost:8000/events", {
+      // const res = await fetch("http://localhost:8000/events", {
+      //   method: "POST",
+      //   credentials: "include",
+      //   body: form,
+      // });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/events`, {
         method: "POST",
         credentials: "include",
         body: form,
@@ -346,34 +357,64 @@ function UserProfileCard({ user, heatmapData }) {
 
 function EventHeatmap({ user, heatmapData }) {
   const [range, setRange] = useState({ start: subDays(new Date(), 180), end: new Date() });
+
+  const levelFromCount = (c) => {
+    if (!c) return 0;
+    if (c >= 10) return 4;
+    if (c >= 6) return 3;
+    if (c >= 4) return 2;
+    return 1;
+  };
+
   return (
-    <Box sx={{my: 4, mx: 'auto', width: { xs: '99vw', md: 660 }, maxWidth: 720, bgcolor: 'background.paper', borderRadius: 3, p: 2, boxShadow: '0 2px 12px 0 #ffefed26', position: 'relative' }}>
-      <Typography variant="subtitle1" sx={{ mb: 2, color: '#fc5603', fontWeight: 700, letterSpacing: '.5px' }}>{user}'s Activity</Typography>
+    <Box sx={{
+      my: 4,
+      mx: 'auto',
+      width: { xs: '99vw', md: 660 },
+      maxWidth: 720,
+      bgcolor: 'background.paper',
+      borderRadius: 3,
+      p: 2,
+      boxShadow: '0 2px 12px 0 #ffefed26',
+      position: 'relative'
+    }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          mb: 2,
+          color: '#fc5603',
+          fontWeight: 700,
+          letterSpacing: '.5px'
+        }}
+      >
+        {user}'s Activity
+      </Typography>
+
       <ActivityHeatmap
-  data={heatmapData.map(e => ({
-    date: e.date,
-    count: e.count
-  }))}
-  weekStart={0}
-  panelColors={{
-    0: "#ececec",
-    1: "#ffe4bc",
-    2: "#ffc267",
-    4: "#ff9830",
-    6: "#fc5603",
-    10: "#b23400"
-  }}
-  rectProps={{ rx: 3, fill: "#eee" }}
-  tooltip={(value) => 
-    value && value.count
-      ? `${value.date}: ${value.count} log${value.count === 1 ? '' : 's'}`
-      : "No Activity"
-  }
-/>
-      <style>{`.color-empty { fill: #ececec;} .color-github-1 { fill: #ffe4bc;} .color-github-2 { fill: #ffc267;} .color-github-3 { fill: #ff9830;} .color-github-4 { fill: #fc5603;} .color-github-5 { fill: #b23400; }`}</style>
+        activities={(heatmapData ?? []).map(e => ({
+          date: e.date,
+          count: e.count,
+          level: levelFromCount(e.count)
+        }))}
+        startDate={range.start}
+        endDate={range.end}
+        cellColors={{
+          level0: "#ececec",
+          level1: "#ffe4bc",
+          level2: "#ffc267",
+          level3: "#ff9830",
+          level4: "#fc5603"
+        }}
+        renderTooltip={(cell) =>
+          cell && cell.count
+            ? `${cell.date}: ${cell.count} log${cell.count === 1 ? '' : 's'}`
+            : "No Activity"
+        }
+      />
     </Box>
   );
 }
+
 
 function EventGrid({ isMobile, refreshFlag, username }) {
   // Use username from props if valid, default to 'Tanish Bajaj'
@@ -387,7 +428,8 @@ function EventGrid({ isMobile, refreshFlag, username }) {
   useEffect(() => {
     setLoading(true);
     setError('');
-    let url = `http://localhost:8000/events?`;
+    // let url = `http://localhost:8000/events?`;
+    let url = `${import.meta.env.VITE_API_BASE}/events?`;
     if (user) url += `user=${user}&`;
     if (agg) url += `agg=${agg}`;
     fetch(url, { credentials: 'include' })
@@ -399,7 +441,8 @@ function EventGrid({ isMobile, refreshFlag, username }) {
 
   // Heatmap: daily aggregation
   useEffect(() => {
-    fetch(`http://localhost:8000/events?agg=daily&user=${user}`, { credentials: 'include' })
+    // fetch(`http://localhost:8000/events?agg=daily&user=${user}`, { credentials: 'include' })
+    fetch(`${import.meta.env.VITE_API_BASE}/events?agg=daily&user=${user}`, { credentials: 'include' })
       .then(res => res.json())
       .then(groups => {
         const map = (groups || []).map(g => ({
@@ -421,7 +464,8 @@ function EventGrid({ isMobile, refreshFlag, username }) {
                 <CardMedia
                   component="img"
                   height="160"
-                  image={`http://localhost:8000${evt.photo}`}
+                  // image={`http://localhost:8000${evt.photo}`}
+                  image={`${import.meta.env.VITE_API_BASE}${evt.photo}`}
                   alt="event"
                   sx={{ width: 1, objectFit: 'cover' }}
                 />
@@ -529,7 +573,11 @@ function App() {
 
   useEffect(() => {
     // On first mount, check for session
-    fetch("http://localhost:8000/me", {
+    // fetch("http://localhost:8000/me", {
+    //   method: "GET",
+    //   credentials: "include",
+    // })
+    fetch(`${import.meta.env.VITE_API_BASE}/me`, {
       method: "GET",
       credentials: "include",
     })
@@ -561,7 +609,11 @@ function App() {
   };
   const handleViewGrid = () => setPage("grid");
   const handleLogout = async () => {
-    await fetch("http://localhost:8000/logout", {
+    // await fetch("http://localhost:8000/logout", {
+    //   method: "POST",
+    //   credentials: "include"
+    // });
+    await fetch(`${import.meta.env.VITE_API_BASE}/logout`, {
       method: "POST",
       credentials: "include"
     });

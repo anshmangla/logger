@@ -16,7 +16,7 @@ app = FastAPI()
 # CORS must come before endpoints
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[os.environ.get("ALLOWED_ORIGIN", "http://localhost:5173")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,13 +30,22 @@ USERS = {
 }
 SESSIONS = {}
 
+# UPLOAD_DIR = "uploads"
+# os.makedirs(UPLOAD_DIR, exist_ok=True)
+# app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# # --- DB Setup ---
+# Base = declarative_base()
+# engine = create_engine("sqlite:///./events.db", connect_args={"check_same_thread": False})
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # --- DB Setup ---
 Base = declarative_base()
-engine = create_engine("sqlite:///./events.db", connect_args={"check_same_thread": False})
+engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:////app/data/events.db"), connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Event(Base):
