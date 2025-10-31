@@ -1,8 +1,11 @@
 FROM node:20-alpine as build
 WORKDIR /app
-# Copy only frontend directory since Render builds from repo root
-COPY frontend /app
-RUN npm install && npm run build
+# Copy only package files first to leverage Docker layer cache
+COPY frontend/package*.json ./
+RUN npm install
+# Now copy the rest of the frontend source
+COPY frontend .
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
