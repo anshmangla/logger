@@ -210,7 +210,7 @@ function AddEventForm({ onSuccess, username }) {
       //   credentials: "include",
       //   body: form,
       // });
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}/events`, {
+      const res = await fetch(`${API_BASE}/events`, {
         method: "POST",
         credentials: "include",
         body: form,
