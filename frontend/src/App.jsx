@@ -28,7 +28,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme, createTheme, ThemeProvider } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import 'react-calendar-heatmap/dist/styles.css';
+// import 'react-calendar-heatmap/dist/styles.css';
 import { addDays, subDays, format } from 'date-fns';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
