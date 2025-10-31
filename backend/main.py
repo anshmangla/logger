@@ -54,23 +54,16 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # --- DB Setup ---
 Base = declarative_base()
-# Ensure a writable directory exists for SQLite (ephemeral on free tier)
-DB_DIR = os.environ.get("DB_DIR", "data")
-os.makedirs(DB_DIR, exist_ok=True)
-DEFAULT_DB_URL = f"sqlite:///{os.path.join(DB_DIR, 'events.db')}"
-
-# If DATABASE_URL is provided and is sqlite, ensure its parent directory exists
-db_url = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
-if db_url.startswith("sqlite"):
-    # Normalize sqlite URL to a filesystem path
-    # Cases: sqlite:///relative/path.db  or sqlite:////absolute/path.db
-    path_part = db_url.split("sqlite:///")[-1]
-    # If absolute (starts with '/'), keep as-is; else join with CWD
-    if path_part:
-        db_path = path_part
-        dir_name = os.path.dirname(db_path)
-        if dir_name:
-            os.makedirs(dir_name, exist_ok=True)
+# Use current working directory for SQLite (ephemeral on free tier)
+# Ensure the database file is in a writable location
+if "DATABASE_URL" in os.environ and not os.environ["DATABASE_URL"].startswith("sqlite"):
+    # Use provided DATABASE_URL (e.g., PostgreSQL)
+    db_url = os.environ["DATABASE_URL"]
+else:
+    # For SQLite, use absolute path in current working directory
+    cwd = os.getcwd()
+    db_file = os.path.join(cwd, "events.db")
+    db_url = f"sqlite:///{db_file}"
 
 engine = create_engine(db_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
