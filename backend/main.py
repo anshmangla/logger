@@ -39,7 +39,8 @@ SESSIONS = {}
 # engine = create_engine("sqlite:///./events.db", connect_args={"check_same_thread": False})
 # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-UPLOAD_DIR = "uploads"
+# Store uploads inside the persistent disk mounted at /app/data
+UPLOAD_DIR = "/app/data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 

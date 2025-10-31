@@ -5,13 +5,10 @@ services:
     dockerfilePath: backend/Dockerfile
     autoDeploy: true
     plan: free
-    disks:
-      - name: uploads
-        mountPath: /app/uploads
-        sizeGB: 1
-      - name: data
-        mountPath: /app/data
-        sizeGB: 1
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
     envVars:
       - key: ALLOWED_ORIGIN
         fromService:
