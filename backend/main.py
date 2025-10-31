@@ -14,15 +14,17 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 app = FastAPI()
 
 # CORS must come before endpoints
-allowed_origin = os.environ.get("ALLOWED_ORIGIN", "")
-if not allowed_origin:
-    allowed_origin_host = os.environ.get("ALLOWED_ORIGIN_HOST")
-    if allowed_origin_host:
-        # Strip port if present and construct full origin
-        host_clean = allowed_origin_host.split(":")[0]
-        allowed_origin = f"https://{host_clean}"
-if not allowed_origin:
-    allowed_origin = "http://localhost:5173"
+# Prioritize ALLOWED_ORIGIN_HOST from Render blueprint over ALLOWED_ORIGIN
+allowed_origin_host = os.environ.get("ALLOWED_ORIGIN_HOST")
+if allowed_origin_host:
+    # Strip port if present and construct full origin
+    host_clean = allowed_origin_host.split(":")[0]
+    allowed_origin = f"https://{host_clean}"
+else:
+    # Fallback to ALLOWED_ORIGIN if ALLOWED_ORIGIN_HOST not set
+    allowed_origin = os.environ.get("ALLOWED_ORIGIN", "")
+    if not allowed_origin:
+        allowed_origin = "http://localhost:5173"
 
 # Log CORS configuration for debugging
 import sys
