@@ -8,8 +8,12 @@ import secrets
 import shutil
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func
 from sqlalchemy.orm import sessionmaker, declarative_base
+
+# IST timezone
+IST = ZoneInfo("Asia/Kolkata")
 
 app = FastAPI()
 
@@ -101,7 +105,7 @@ class Event(Base):
     timestamp = Column(String)  # ISO string if 'earlier'
     username = Column(String, nullable=False)
     photo = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(IST))
 
 Base.metadata.create_all(bind=engine)
 
@@ -164,12 +168,12 @@ def add_event(
 ):
     photo = None
     if file:
-        photo_fn = f"{datetime.utcnow().timestamp()}_{file.filename}"
+        photo_fn = f"{datetime.now(IST).timestamp()}_{file.filename}"
         path = os.path.join(UPLOAD_DIR, photo_fn)
         with open(path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         photo = f"/uploads/{photo_fn}"
-    created_at = datetime.utcnow()
+    created_at = datetime.now(IST)
     db = SessionLocal()
     evt = Event(
         title=title,
@@ -183,6 +187,11 @@ def add_event(
     db.add(evt)
     db.commit()
     db.refresh(evt)
+    # Ensure created_at is timezone-aware (IST) for ISO format
+    if evt.created_at.tzinfo is None:
+        created_at_ist = evt.created_at.replace(tzinfo=IST)
+    else:
+        created_at_ist = evt.created_at
     db.close()
     return {
         "title": evt.title,
@@ -191,7 +200,7 @@ def add_event(
         "timestamp": evt.timestamp,
         "username": evt.username,
         "photo": evt.photo,
-        "created_at": evt.created_at.isoformat()
+        "created_at": created_at_ist.isoformat()
     }
 
 @app.get("/events")
@@ -202,6 +211,11 @@ def list_events(user: Optional[str] = None, date: Optional[str] = None, agg: Opt
         q = q.filter(Event.username == user)
 
     def serialize(e):
+        # Ensure created_at is timezone-aware (IST) for ISO format
+        if e.created_at.tzinfo is None:
+            created_at_ist = e.created_at.replace(tzinfo=IST)
+        else:
+            created_at_ist = e.created_at
         return {
             "title": e.title,
             "note": e.note,
@@ -209,7 +223,7 @@ def list_events(user: Optional[str] = None, date: Optional[str] = None, agg: Opt
             "timestamp": e.timestamp,
             "username": e.username,
             "photo": e.photo,
-            "created_at": e.created_at.isoformat()
+            "created_at": created_at_ist.isoformat()
         }
 
     if agg == "daily":
