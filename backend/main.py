@@ -18,9 +18,17 @@ allowed_origin = os.environ.get("ALLOWED_ORIGIN", "")
 if not allowed_origin:
     allowed_origin_host = os.environ.get("ALLOWED_ORIGIN_HOST")
     if allowed_origin_host:
-        allowed_origin = f"https://{allowed_origin_host}"
+        # Strip port if present and construct full origin
+        host_clean = allowed_origin_host.split(":")[0]
+        allowed_origin = f"https://{host_clean}"
 if not allowed_origin:
     allowed_origin = "http://localhost:5173"
+
+# Log CORS configuration for debugging
+import sys
+print(f"CORS allowed_origin: {allowed_origin}", file=sys.stderr)
+print(f"ALLOWED_ORIGIN env: {os.environ.get('ALLOWED_ORIGIN', 'NOT SET')}", file=sys.stderr)
+print(f"ALLOWED_ORIGIN_HOST env: {os.environ.get('ALLOWED_ORIGIN_HOST', 'NOT SET')}", file=sys.stderr)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +37,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Debug middleware to log CORS-related headers
+@app.middleware("http")
+async def cors_debug_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin:
+        print(f"Request origin: {origin}", file=sys.stderr)
+        print(f"Allowed origin: {allowed_origin}", file=sys.stderr)
+    response = await call_next(request)
+    return response
 
 # Map short username to (full name, password)
 USERS = {
