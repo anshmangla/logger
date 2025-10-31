@@ -54,7 +54,11 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # --- DB Setup ---
 Base = declarative_base()
-engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:////app/data/events.db"), connect_args={"check_same_thread": False})
+# Ensure a writable directory exists for SQLite (ephemeral on free tier)
+DB_DIR = os.environ.get("DB_DIR", "data")
+os.makedirs(DB_DIR, exist_ok=True)
+DEFAULT_DB_URL = f"sqlite:///{os.path.join(DB_DIR, 'events.db')}"
+engine = create_engine(os.environ.get("DATABASE_URL", DEFAULT_DB_URL), connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Event(Base):
