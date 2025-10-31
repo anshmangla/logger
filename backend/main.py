@@ -17,9 +17,13 @@ app = FastAPI()
 # Prioritize ALLOWED_ORIGIN_HOST from Render blueprint over ALLOWED_ORIGIN
 allowed_origin_host = os.environ.get("ALLOWED_ORIGIN_HOST")
 if allowed_origin_host:
-    # Strip port if present and construct full origin
+    # Strip port if present
     host_clean = allowed_origin_host.split(":")[0]
-    allowed_origin = f"https://{host_clean}"
+    # Render's host property only gives service name, need to append .onrender.com
+    if not host_clean.endswith('.onrender.com'):
+        allowed_origin = f"https://{host_clean}.onrender.com"
+    else:
+        allowed_origin = f"https://{host_clean}"
 else:
     # Fallback to ALLOWED_ORIGIN if ALLOWED_ORIGIN_HOST not set
     allowed_origin = os.environ.get("ALLOWED_ORIGIN", "")
