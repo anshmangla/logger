@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: logger-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    autoDeploy: true
+    plan: free
+    disk:
+      - name: uploads
+        mountPath: /app/uploads
+        sizeGB: 1
+      - name: data
+        mountPath: /app/data
+        sizeGB: 1
+    envVars:
+      - key: ALLOWED_ORIGIN
+        fromService:
+          type: web
+          name: logger-frontend
+          property: url
+
+  - type: web
+    name: logger-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    autoDeploy: true
+    plan: free
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: logger-backend
+          property: url
+
+
