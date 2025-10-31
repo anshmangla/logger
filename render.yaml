@@ -19,10 +19,10 @@ services:
     autoDeploy: true
     plan: free
     envVars:
-      - key: VITE_API_BASE
+      - key: VITE_API_HOST
         fromService:
           type: web
           name: logger-backend
-          property: connectionString
+          property: host
 
 
