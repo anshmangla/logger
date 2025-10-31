@@ -1,6 +1,7 @@
 FROM node:20-alpine as build
 WORKDIR /app
-COPY . .
+# Copy only frontend directory since Render builds from repo root
+COPY frontend /app
 RUN npm install && npm run build
 
 FROM nginx:alpine
